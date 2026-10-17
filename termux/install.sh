@@ -41,11 +41,18 @@ main() {
   done
 
   # 1) OpenSSH
+  # No full upgrade by default (slow). Only if installing openssh fails or the
+  # installed binaries don't run (old libraries), upgrade once and retry.
+  export DEBIAN_FRONTEND=noninteractive
   if ! command -v sshd >/dev/null 2>&1; then
     say "Installing openssh..."
-    export DEBIAN_FRONTEND=noninteractive
-    pkg install -y openssh </dev/null >/dev/null || die "pkg install openssh failed (try: pkg update)"
+    if ! pkg install -y openssh </dev/null >/dev/null 2>&1 || ! ssh -V >/dev/null 2>&1; then
+      warn "openssh install failed - upgrading packages once (this can take a while)..."
+      pkg upgrade -y -o Dpkg::Options::=--force-confold </dev/null || true
+      pkg install -y openssh </dev/null || die "Could not install openssh."
+    fi
   fi
+  ssh -V >/dev/null 2>&1 || die "ssh doesn't run. Try: pkg upgrade, then run this again."
   say "openssh: $(ssh -V 2>&1)"
 
   # 2) Authorized keys
