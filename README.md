@@ -56,6 +56,23 @@ ssh phone2 "termux-battery-status"
 
 ---
 
+## Telling your AI agent about the phones
+
+There's no MCP server to install. An agent that can run commands on your PC (Claude with Desktop Commander,
+Claude Code, Codex, ...) can use the phones through `ssh` - it just needs to be told. Run:
+
+```powershell
+.\pc\termux-bridge.ps1 agent
+```
+
+This prints short instructions with **your** phone aliases and copies them. Then either:
+- paste them at the start of a chat, or
+- save them once so every chat knows: as a **skill** in the Claude app, in your AI app's memory /
+  custom instructions, or for Claude Code run `.\pc\termux-bridge.ps1 agent -Install`
+  (saves `~/.claude/skills/termux-phone/SKILL.md`).
+
+Run `agent` again after adding a phone. Agents working inside this repo also read [AGENTS.md](AGENTS.md).
+
 ## After a router change or a new IP
 
 ```powershell
@@ -72,6 +89,7 @@ If the subnet isn't detected (for example, on an unusual network): `sync -Subnet
 |---|---|
 | `.\pc\termux-bridge.ps1 list` | List registered phones |
 | `.\pc\termux-bridge.ps1 remove -Name phone2` | Remove a phone from the PC |
+| `.\pc\termux-bridge.ps1 agent [-Install]` | Instructions for an AI agent (see above) |
 | `curl -fsSL https://raw.githubusercontent.com/ali934h/termux-ssh-bridge/main/termux/uninstall.sh \| bash` | Undo the setup on the phone |
 
 ## Keeping it reliable on Android
@@ -124,7 +142,8 @@ Tips:
 ```
 termux/install.sh     phone side (bash, Termux)
 termux/uninstall.sh   undo the setup on the phone
-pc/termux-bridge.ps1  PC side (pair / sync / list / remove)
+pc/termux-bridge.ps1  PC side (pair / sync / list / remove / agent)
+AGENTS.md             notes for AI agents working with this repo
 ```
 
 On the PC, the scripts use these files: `~/.ssh/id_termux` (key), `~/.ssh/config` (managed block), `~/.ssh/termux-phones.json` (phone list).

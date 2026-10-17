@@ -9,12 +9,15 @@
   .\termux-bridge.ps1 sync -Name tab  # give the next NEW phone the alias "tab"
   .\termux-bridge.ps1 list            # show registered phones
   .\termux-bridge.ps1 remove -Name tab
+  .\termux-bridge.ps1 agent           # print (and copy) instructions telling an AI agent how to reach the phones
+  .\termux-bridge.ps1 agent -Install  # ...and save them as a Claude Code skill
 
   After sync, use the alias:   ssh phone "uname -a"
 #>
 [CmdletBinding()]
 param(
-  [Parameter(Position = 0)][ValidateSet('pair', 'sync', 'list', 'remove')][string]$Action = 'sync',
+  [Parameter(Position = 0)][ValidateSet('pair', 'sync', 'list', 'remove', 'agent')][string]$Action = 'sync',
+  [switch]$Install,           # agent: also save as a Claude Code skill (~/.claude/skills/termux-phone)
   [string]$Name,
   [string]$Subnet,            # e.g. 192.168.0  (default: auto-detect from physical adapters)
   [int]$Port = 8022,
@@ -176,7 +179,56 @@ function Show-Phones {
   Write-Host "Use:  ssh $($phones[0].name) `"uname -a`""
 }
 
+function Get-AgentText {
+  $phones = @(Get-Phones)
+  $script = Join-Path $PSScriptRoot 'termux-bridge.ps1'
+  $list = if ($phones) { ($phones | ForEach-Object { "- ``$($_.name)`` -> $($_.model) (last seen at $($_.ip))" }) -join "`n" }
+          else { '- (none registered yet - run termux-bridge.ps1 pair / sync first)' }
+  $first = if ($phones) { $phones[0].name } else { 'phone' }
+@"
+---
+name: termux-phone
+description: Use when the user mentions Termux, their Android phone(s), or wants something run or checked on a phone. The phones are reachable over SSH from this Windows PC.
+---
+
+# Android phones (Termux) over SSH
+
+This PC can run shell commands on the user's Android phones (Termux) over SSH, set up with
+termux-ssh-bridge (https://github.com/$Repo). There is no special MCP server: use whatever tool you
+normally use to run commands on this PC (a terminal / shell / Desktop Commander) and call ``ssh``.
+
+## Phones (ssh alias -> device)
+$list
+
+## Running commands
+- ``ssh $first "uname -a"`` - key-only login, port 8022; aliases live in ``~/.ssh/config``.
+- The phone shell is bash in Termux: no root, ```$PREFIX`` = /data/data/com.termux/files/usr,
+  install packages with ``pkg install -y <name>``. Ask before large installs (phone storage is limited).
+- Multi-line scripts: write them to a file, then pipe it. In PowerShell strip CRs first:
+  ``(Get-Content script.sh -Raw) -replace "``r","" | ssh $first bash``  (Windows PowerShell 5 mangles quotes in long inline commands).
+- Phone features (battery, clipboard, notifications, location...) use Termux:API commands such as
+  ``termux-battery-status``; they work only if the Termux:API app is installed. Wrap them in ``timeout 15``.
+- Android blocks opening screens (``termux-open``, ``am start``) from SSH while Termux is in the background:
+  ask the user to do that step on the phone.
+
+## If it doesn't connect
+1. Run ``powershell -NoProfile -ExecutionPolicy Bypass -File "$script" sync`` - it rescans the Wi-Fi and fixes changed IPs.
+2. Still failing: Termux is probably closed on the phone, or the phone is on another network. Ask the user to open Termux.
+"@
+}
+
 switch ($Action) {
+  'agent' {
+    $text = Get-AgentText
+    Write-Host $text
+    try { Set-Clipboard -Value $text; Write-Host "`n(copied - paste it into your AI chat, or save it as a skill / memory)" -ForegroundColor DarkGray } catch {}
+    if ($Install) {
+      $dir = Join-Path $env:USERPROFILE '.claude\skills\termux-phone'
+      New-Item -ItemType Directory -Force -Path $dir | Out-Null
+      [IO.File]::WriteAllText((Join-Path $dir 'SKILL.md'), $text.Replace("`r", ''), $Utf8)
+      Write-Host "Saved Claude Code skill: $dir\SKILL.md" -ForegroundColor Green
+    }
+  }
   'pair' {
     $pub = Get-PubKey
     $cmd = "curl -fsSL https://raw.githubusercontent.com/$Repo/main/termux/install.sh | bash -s -- '$pub'"
