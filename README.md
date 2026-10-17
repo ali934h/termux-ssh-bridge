@@ -78,7 +78,31 @@ If the subnet isn't detected (for example, on an unusual network): `sync -Subnet
 
 - **Settings → Apps → Termux → Battery → Unrestricted**, otherwise Android kills sshd when the screen is off.
 - sshd starts **whenever Termux opens**. To have it start **after the phone reboots** too,
-  install the **Termux:Boot** app (from F-Droid, like Termux itself) and open it once. The script has already placed `~/.termux/boot/start-sshd`.
+  install the **Termux:Boot** app (see the table below) and open it once. The script has already placed `~/.termux/boot/start-sshd`.
+
+## Optional add-on apps (install them yourself)
+
+The script does **not** install these. Install them by hand if you want them:
+
+| App | What it's for | Install |
+|---|---|---|
+| **Termux:API** | Lets commands reach phone features: battery, clipboard, notifications, Wi-Fi, location, camera... (`termux-battery-status`, `termux-clipboard-get`, ...) | 1) Install the app (link below) 2) In Termux: `pkg install termux-api` |
+| **Termux:Boot** | Starts sshd automatically after the phone reboots, without opening Termux | Install the app (link below), then open it **once** |
+
+**Where to download them:** from the **same place you installed Termux from**. Android refuses to install
+an add-on whose signature doesn't match Termux, so don't mix sources (GitHub with F-Droid, or anything with Google Play).
+
+| Termux installed from | Termux:API | Termux:Boot |
+|---|---|---|
+| **GitHub** (check: `echo $TERMUX_APK_RELEASE` prints `GITHUB`) | [github.com/termux/termux-api/releases](https://github.com/termux/termux-api/releases) → the `termux-api-app_v…+github.debug.apk` file | [github.com/termux/termux-boot/releases](https://github.com/termux/termux-boot/releases) → the `termux-boot-app_v…+github.debug.apk` file |
+| **F-Droid** (`F_DROID`) | [f-droid.org/packages/com.termux.api](https://f-droid.org/packages/com.termux.api/) | [f-droid.org/packages/com.termux.boot](https://f-droid.org/packages/com.termux.boot/) |
+
+Tips:
+- Download the APK in the phone's browser, then open it from the **My Files / Downloads** app and tap **Install**
+  (allow "Install unknown apps" for that app if Android asks).
+- `termux-open file.apk` only shows the installer when Termux is on screen; over SSH Android blocks it.
+- Test Termux:API: `termux-battery-status` should print JSON. If it hangs, the app is missing or comes from a different source than Termux.
+- The first time each feature is used (location, camera, ...), Android asks for permission on the phone.
 
 ## install.sh options
 

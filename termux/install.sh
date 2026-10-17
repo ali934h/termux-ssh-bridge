@@ -141,6 +141,15 @@ EOF
   echo "  HostKey: ${fp:-unknown}"
   echo "  Keys   : $nkeys authorized"
   echo
+  # Optional add-on apps: only a hint, nothing is installed.
+  local pkgs
+  pkgs=$(cmd package list packages 2>/dev/null || true)
+  if [ -n "$pkgs" ]; then
+    grep -q 'com\.termux\.api$' <<<"$pkgs" \
+      || warn "Optional: Termux:API app not installed (phone features). See README > Optional add-on apps."
+    grep -q 'com\.termux\.boot$' <<<"$pkgs" \
+      || warn "Optional: Termux:Boot app not installed - after a reboot, open Termux once to start sshd."
+  fi
   say "Done. On the PC run:  .\\termux-bridge.ps1 sync"
   warn "Android: Settings > Apps > Termux > Battery > Unrestricted, so sshd isn't killed."
 }
