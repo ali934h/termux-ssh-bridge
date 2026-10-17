@@ -132,14 +132,20 @@ EOF
   command -v termux-wake-lock >/dev/null 2>&1 && termux-wake-lock || true
 
   # 6) Summary
-  local fp
-  fp=$(ssh-keygen -lf "$PREFIX/etc/ssh/ssh_host_ed25519_key.pub" 2>/dev/null | awk '{print $2}')
+  local ip=""
+  if command -v termux-wifi-connectioninfo >/dev/null 2>&1; then   # needs the Termux:API app
+    ip=$(timeout 10 termux-wifi-connectioninfo </dev/null 2>/dev/null \
+         | sed -n 's/.*"ip": *"\([0-9.]*\)".*/\1/p' | head -1) || true
+  fi
+  [ "$ip" = "0.0.0.0" ] && ip=""
   echo
-  echo "  Device : $(getprop ro.product.manufacturer 2>/dev/null) $(getprop ro.product.model 2>/dev/null) (Android $(getprop ro.build.version.release 2>/dev/null), $(uname -m))"
-  echo "  User   : $(whoami)"
-  echo "  Port   : 8022"
-  echo "  HostKey: ${fp:-unknown}"
-  echo "  Keys   : $nkeys authorized"
+  echo "  Device  : $(getprop ro.product.manufacturer 2>/dev/null) $(getprop ro.product.model 2>/dev/null) (Android $(getprop ro.build.version.release 2>/dev/null), $(uname -m))"
+  echo "  Keys    : $nkeys authorized"
+  echo
+  echo "  For the Claude MCP config:"
+  echo "    --host      ${ip:-<phone IP: Settings > Wi-Fi > your network > IP address>}"
+  echo "    --port      8022"
+  echo "    --username  $(whoami)"
   echo
   # Optional add-on apps: only a hint, nothing is installed.
   local pkgs
@@ -150,7 +156,7 @@ EOF
     grep -q 'com\.termux\.boot$' <<<"$pkgs" \
       || warn "Optional: Termux:Boot app not installed - after a reboot, open Termux once to start sshd."
   fi
-  say "Done. On the PC run:  .\\termux-bridge.ps1 sync"
+  say "Done. Put the values above in the Claude config (see README), then restart Claude."
   warn "Android: Settings > Apps > Termux > Battery > Unrestricted, so sshd isn't killed."
 }
 
